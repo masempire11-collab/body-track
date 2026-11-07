@@ -1,1 +1,1 @@
-{"name":"BODY TRACK","short_name":"BODY TRACK","start_url":"./index.html","display":"standalone","background_color":"#101311","theme_color":"#101311","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
+{"name":"BODY TRACK DUO","short_name":"BODY TRACK","description":"Дневник совместных тренировок","start_url":"./","scope":"./","display":"standalone","background_color":"#101411","theme_color":"#101411","icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
