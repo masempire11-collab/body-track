@@ -123,14 +123,26 @@ function openReplacement(exerciseId){
   if(completed&&!confirm('Уже есть выполненные подходы. Сохранить их отдельно, а оставшиеся заменить?'))return;
   if(completed){const old=structuredClone(exercise);old.id=uid();old.name=previous;old.partialBeforeReplacement=true;old.people=Object.fromEntries(Object.entries(old.people).map(([who,sets])=>[who,sets.filter(set=>set.done)]));active.exercises.splice(active.exercises.indexOf(exercise),0,old)}
   exercise.replacedFrom=exercise.replacedFrom||previous;exercise.name=name;exercise.replacementScope='session';exercise.replacementDate=active.date;
-  exercise.people=Object.fromEntries(Object.entries(exercise.people).map(([who,sets])=>[who,sets.map((set,index)=>{const old=latestSet(name,who,index);const v=makeSet('',old?.weight||'');v.reps=old?.reps||'';v.dropWeight=old?.dropWeight||'';v.dropReps=old?.dropReps||'';return v})]));
+  exercise.people=Object.fromEntries(Object.entries(exercise.people).map(([who,sets])=>[who,sets.map((set,index)=>{const old=latestSet(name,who,index);const v=makeSet('',old?.weight??'');v.reps=old?.reps??'';v.dropWeight=old?.dropWeight||'';v.dropReps=old?.dropReps||'';return v})]));
   cleanup();queueDraft();editor();
  };
  if(typeof dlg.showModal==='function'){if(!dlg.open)dlg.showModal()}else dlg.setAttribute('open','');
  input.focus();
 }
-function makeSet(reps='',weight=''){return {id:uid(),planned:String(reps),reps:String(reps).includes('+')?'':String(reps),weight:String(weight),dropWeight:'',dropReps:'',done:false,note:''}}function latestSet(name,who,index){for(const session of [...db.sessions].filter(x=>x.saved&&participantsOf(x).includes(who)).sort((a,b)=>b.date.localeCompare(a.date))){for(const ex of session.exercises.filter(x=>x.name===name)){const set=ex.people?.[who]?.[index];if(set?.done)return set}}return null}
-function createExercise(t){let reps=String(t.reps||'12/12/12').split('/');return {id:uid(),name:t.name||'Новое упражнение',group:t.group||'',people:Object.fromEntries(['artem','damir'].map(who=>[who,reps.map((r,i)=>{let old=latestSet(t.name,who,i),v=makeSet('',old?.weight||'');v.reps=old?.reps||'';if(old?.dropWeight){v.dropWeight=old.dropWeight;v.dropReps=old.dropReps||''}return v})]))}}
+function makeSet(reps='',weight=''){return {id:uid(),planned:String(reps),reps:String(reps).includes('+')?'':String(reps),weight:String(weight),dropWeight:'',dropReps:'',done:false,note:''}}function latestSet(name,who,index){
+ // The last recorded result is a starting value, not a completed set in the new session.
+ // Earlier versions only copied checked sets, leaving fields empty for imported and unchecked records.
+ const sessions=db.sessions.filter(s=>s.saved&&participantsOf(s).includes(who)).sort((a,b)=>b.date.localeCompare(a.date));
+ for(const session of sessions){
+  const exercises=(session.exercises||[]).filter(e=>e.name===name);
+  for(const ex of exercises){
+   const set=ex.people?.[who]?.[index];
+   if(set&&(String(set.weight??'').trim()!==''||String(set.reps??'').trim()!==''))return set;
+  }
+ }
+ return null;
+}
+function createExercise(t){let reps=String(t.reps||'12/12/12').split('/');return {id:uid(),name:t.name||'Новое упражнение',group:t.group||'',people:Object.fromEntries(['artem','damir'].map(who=>[who,reps.map((r,i)=>{let old=latestSet(t.name,who,i),v=makeSet('',old?.weight??'');v.reps=old?.reps??'';if(old?.dropWeight){v.dropWeight=old.dropWeight;v.dropReps=old.dropReps||''}return v})]))}}
 function startSession(){if(!picked.length){alert('Выбери хотя бы одного участника');return}if(active&&!active.saved&&!confirm('Заменить текущий незавершённый черновик новой тренировкой?'))return;let t=db.templates.find(t=>t.id===$('startTemplate').value);if(!t)return;active={id:uid(),date:$('startDate').value||today(),name:t.name,templateId:t.id,note:'',saved:false,participants:[...picked],exercises:t.exercises.map(createExercise)};person=picked[0];openedExercise=active.exercises[0]?.id||null;$('sessionMeta').classList.add('hide');saveDraft();go('train')}
 function participantsOf(s){return Array.isArray(s.participants)&&s.participants.length?s.participants:['artem','damir']}
 function ensureActivePerson(){if(active&&!participantsOf(active).includes(person))person=participantsOf(active)[0]}
